@@ -37,6 +37,16 @@
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
 
+    <!-- NasTech AI: Biometric lock -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+    <!-- NasTech AI: File observation -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_DOCUMENTS" />
+    <!-- NasTech AI: Camera for passkey -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.fingerprint" android:required="false" />
+
     <application
         android:name=".app.TermuxApplication"
         android:allowBackup="false"
@@ -87,6 +97,35 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity-alias>
+
+        <!-- NasTech AI Lock Screen -->
+        <activity
+            android:name=".app.nastech.NasTechLockActivity"
+            android:exported="false"
+            android:theme="@style/Theme.NasTech.Lock"
+            android:screenOrientation="portrait"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true" />
+
+        <!-- NasTech AI Browser -->
+        <activity
+            android:name=".app.nastech.NasTechBrowserActivity"
+            android:exported="false"
+            android:theme="@style/Theme.NasTech.Browser"
+            android:configChanges="orientation|screenSize" />
+
+        <!-- NasTech File Preview (MD / PDF) -->
+        <activity
+            android:name=".app.nastech.NasTechFilePreviewActivity"
+            android:exported="false"
+            android:theme="@style/Theme.NasTech.Settings" />
+
+        <!-- NasTech Settings -->
+        <activity
+            android:name=".app.nastech.NasTechSettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.NasTech.Settings"
+            android:label="@string/nastech_settings_title" />
 
         <activity
             android:name=".app.activities.HelpActivity"
