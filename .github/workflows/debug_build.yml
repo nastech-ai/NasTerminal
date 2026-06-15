@@ -1,13 +1,15 @@
-name: Build
+name: NasTech AI Terminal — Build & Release
 
 on:
   push:
     branches:
       - master
+      - main
       - 'github-releases/**'
   pull_request:
     branches:
       - master
+      - main
 
 jobs:
   build:
@@ -131,3 +133,32 @@ jobs:
           path: |
             ${{ env.APK_DIR_PATH }}/${{ env.APK_BASENAME_PREFIX }}_sha256sums
             ${{ env.APK_DIR_PATH }}/output-metadata.json
+
+      - name: Push NasTech APK to ncntech/termux-ap releases
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+        env:
+          GH_PAT: ${{ secrets.GITHUB_PERSONAL_ACCESS_TOKEN }}
+        run: |
+          APK_FILE="$APK_DIR_PATH/${APK_BASENAME_PREFIX}_universal.apk"
+          RELEASE_TAG="nastech-${GITHUB_SHA:0:7}"
+          RELEASE_NAME="NasTech AI Terminal ${RELEASE_TAG}"
+
+          # Create GitHub release via API
+          RELEASE_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: token $GH_PAT" \
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/ncntech/termux-ap/releases" \
+            -d "{\"tag_name\":\"$RELEASE_TAG\",\"name\":\"$RELEASE_NAME\",\"body\":\"NasTech AI Terminal v6 — automated build\\n\\nFeatures: AI streaming, biometric lock, built-in browser, Ubuntu proot, \\$ command system\",\"draft\":false,\"prerelease\":false}")
+
+          UPLOAD_URL=$(echo "$RELEASE_RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('upload_url','').replace('{?name,label}',''))" 2>/dev/null)
+
+          if [ -n "$UPLOAD_URL" ] && [ -f "$APK_FILE" ]; then
+            curl -s -X POST \
+              -H "Authorization: token $GH_PAT" \
+              -H "Content-Type: application/vnd.android.package-archive" \
+              --data-binary @"$APK_FILE" \
+              "${UPLOAD_URL}?name=${APK_BASENAME_PREFIX}_universal.apk"
+            echo "APK uploaded to GitHub release: $RELEASE_TAG"
+          else
+            echo "Warning: Could not upload APK (upload_url empty or file missing)"
+          fi
