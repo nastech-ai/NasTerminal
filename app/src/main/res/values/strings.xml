@@ -2,7 +2,7 @@
 
 <!DOCTYPE resources [
     <!ENTITY TERMUX_PACKAGE_NAME "com.termux">
-    <!ENTITY TERMUX_APP_NAME "Termux">
+    <!ENTITY TERMUX_APP_NAME "NasTech AI Terminal">
     <!ENTITY TERMUX_API_APP_NAME "Termux:API">
     <!ENTITY TERMUX_BOOT_APP_NAME "Termux:Boot">
     <!ENTITY TERMUX_FLOAT_APP_NAME "Termux:Float">
@@ -234,5 +234,27 @@
 
     <!-- Donate Preference -->
     <string name="donate_preference_title">Donate</string>
+
+    <!-- NasTech AI Terminal System -->
+    <string name="nastech_app_name">NasTech AI Terminal</string>
+    <string name="nastech_sidebar_title">⬡ NasTech v6</string>
+    <string name="nastech_toggle_fullscreen">Toggle full screen</string>
+    <string name="nastech_ai_button">NasTech AI</string>
+    <string name="nastech_quick_ai">AI Chat</string>
+    <string name="nastech_quick_ubuntu">Ubuntu</string>
+    <string name="nastech_quick_browser">Browser</string>
+    <string name="nastech_quick_system">$ System</string>
+    <string name="nastech_settings_title">NasTech Settings</string>
+    <string name="nastech_lock_title">NasTech AI Terminal</string>
+    <string name="nastech_lock_subtitle">Biometric or passphrase required</string>
+    <string name="nastech_lock_use_biometric">Use Biometric</string>
+    <string name="nastech_lock_use_passphrase">Use Passphrase</string>
+    <string name="nastech_lock_hint">Enter passphrase</string>
+    <string name="nastech_lock_error">Authentication failed</string>
+    <string name="nastech_ai_thinking">⬡ NasTech is thinking…</string>
+    <string name="nastech_ai_placeholder">$ ask nastech anything…</string>
+    <string name="nastech_browser_title">NasTech Browser</string>
+    <string name="nastech_installer_title">NasTech v6 Installer</string>
+    <string name="nastech_installer_subtitle">Setting up your AI terminal…</string>
 
 </resources>
