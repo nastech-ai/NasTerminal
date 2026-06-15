@@ -79,8 +79,9 @@ public class NasTechManager {
             "# Source NasTech on terminal open\n" +
             "echo -e \"\\033[1;36m⬡ NasTech AI Terminal v6 — ready. Type: $ help\\033[0m\"\n";
 
-        // Write the Piper TTS speak script alongside the init script
+        // Write scripts alongside the init script
         writeSpeakScript(dir);
+        writeAIScript(dir);
 
         try {
             File rcFile = new File(dir, "nastech_init.sh");
@@ -189,6 +190,77 @@ public class NasTechManager {
             }
             // Make executable
             speakFile.setExecutable(true, false);
+        } catch (IOException ignored) {}
+    }
+
+    private static void writeAIScript(File dir) {
+        String aiScript =
+            "#!/usr/bin/env python3\n" +
+            "# NasTech AI Terminal — Streaming OpenRouter client\n" +
+            "# Usage: $ ai [prompt...]\n\n" +
+            "import sys, os, json, urllib.request, urllib.error\n\n" +
+            "def stream_ai(prompt):\n" +
+            "    api_key = os.environ.get('OPENROUTER_API_KEY', '').strip()\n" +
+            "    model   = os.environ.get('NASTECH_MODEL', 'openai/gpt-4o').strip()\n\n" +
+            "    if not api_key:\n" +
+            "        print('\\033[1;31m✗ No API key. Run: $ settings  →  set your OpenRouter key\\033[0m')\n" +
+            "        print('  Get a free key at: https://openrouter.ai/keys')\n" +
+            "        sys.exit(1)\n\n" +
+            "    payload = json.dumps({\n" +
+            "        'model': model,\n" +
+            "        'stream': True,\n" +
+            "        'messages': [{'role': 'user', 'content': prompt}]\n" +
+            "    }).encode()\n\n" +
+            "    req = urllib.request.Request(\n" +
+            "        'https://openrouter.ai/api/v1/chat/completions',\n" +
+            "        data=payload,\n" +
+            "        headers={\n" +
+            "            'Authorization': 'Bearer ' + api_key,\n" +
+            "            'Content-Type':  'application/json',\n" +
+            "            'HTTP-Referer':  'https://github.com/ncntech/termux-ap',\n" +
+            "            'X-Title':       'NasTech AI Terminal'\n" +
+            "        }\n" +
+            "    )\n\n" +
+            "    print('\\033[1;36m⬡ NasTech AI [' + model + ']\\033[0m')\n" +
+            "    print('\\033[0;90m' + '─' * 48 + '\\033[0m')\n\n" +
+            "    try:\n" +
+            "        with urllib.request.urlopen(req, timeout=60) as resp:\n" +
+            "            for raw in resp:\n" +
+            "                line = raw.decode('utf-8').strip()\n" +
+            "                if not line.startswith('data:'):\n" +
+            "                    continue\n" +
+            "                data = line[5:].strip()\n" +
+            "                if data == '[DONE]':\n" +
+            "                    break\n" +
+            "                try:\n" +
+            "                    chunk = json.loads(data)\n" +
+            "                    delta = chunk['choices'][0]['delta'].get('content', '')\n" +
+            "                    if delta:\n" +
+            "                        print(delta, end='', flush=True)\n" +
+            "                except (KeyError, json.JSONDecodeError):\n" +
+            "                    pass\n" +
+            "        print('\\n\\033[0;90m' + '─' * 48 + '\\033[0m')\n" +
+            "    except urllib.error.HTTPError as e:\n" +
+            "        body = e.read().decode('utf-8', errors='replace')\n" +
+            "        print('\\n\\033[1;31m✗ HTTP ' + str(e.code) + ': ' + body[:200] + '\\033[0m')\n" +
+            "        sys.exit(1)\n" +
+            "    except Exception as e:\n" +
+            "        print('\\n\\033[1;31m✗ Error: ' + str(e) + '\\033[0m')\n" +
+            "        sys.exit(1)\n\n" +
+            "if __name__ == '__main__':\n" +
+            "    if len(sys.argv) < 2:\n" +
+            "        print('\\033[1;36mUsage: $ ai [prompt]\\033[0m')\n" +
+            "        print('  Example: $ ai explain recursion in simple terms')\n" +
+            "        print('  Model:   ' + os.environ.get('NASTECH_MODEL', 'openai/gpt-4o'))\n" +
+            "        sys.exit(0)\n" +
+            "    stream_ai(' '.join(sys.argv[1:]))\n";
+
+        try {
+            File aiFile = new File(dir, "nastech_ai.py");
+            try (FileOutputStream fos = new FileOutputStream(aiFile)) {
+                fos.write(aiScript.getBytes());
+            }
+            aiFile.setExecutable(true, false);
         } catch (IOException ignored) {}
     }
 
