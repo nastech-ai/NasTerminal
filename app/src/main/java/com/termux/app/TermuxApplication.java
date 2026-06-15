@@ -71,6 +71,13 @@ public class TermuxApplication extends Application {
         if (isTermuxFilesDirectoryAccessible) {
             TermuxShellEnvironment.writeEnvironmentToFile(this);
         }
+
+        // NasTech AI Terminal — initialize core manager
+        try {
+            com.termux.app.nastech.NasTechManager.init(this);
+        } catch (Exception e) {
+            Logger.logError(LOG_TAG, "NasTech init failed (non-fatal): " + e.getMessage());
+        }
     }
 
     public static void setLogConfig(Context context) {
