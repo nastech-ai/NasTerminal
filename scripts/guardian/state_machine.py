@@ -1,38 +1,53 @@
 """
 NasTech Guardian — State Machine
-Orchestrates the guardian agent lifecycle through well-defined states.
+Drives the guardian agent lifecycle through well-defined states.
 """
 
 import logging
 from enum import Enum, auto
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, List, Optional
 
 log = logging.getLogger(__name__)
 
 
 class State(Enum):
-    IDLE        = auto()
-    HEALTH_CHECK = auto()
-    BUILD       = auto()
-    TEST        = auto()
-    RELEASE     = auto()
-    REPAIR      = auto()
-    NOTIFY      = auto()
-    ERROR       = auto()
-    DONE        = auto()
+    IDLE         = auto()
+    VERIFY       = auto()
+    IDENTITY     = auto()
+    DEPENDENCY   = auto()
+    HEALTH       = auto()
+    BUILD        = auto()
+    REPAIR       = auto()
+    RELEASE      = auto()
+    NOTIFY       = auto()
+    ERROR        = auto()
+    DONE         = auto()
 
 
-TRANSITIONS: Dict[State, list] = {
-    State.IDLE:         [State.HEALTH_CHECK, State.DONE],
-    State.HEALTH_CHECK: [State.BUILD, State.REPAIR, State.ERROR],
-    State.BUILD:        [State.TEST, State.REPAIR, State.ERROR],
-    State.TEST:         [State.RELEASE, State.REPAIR, State.ERROR],
-    State.RELEASE:      [State.NOTIFY, State.ERROR],
-    State.REPAIR:       [State.HEALTH_CHECK, State.NOTIFY, State.ERROR],
-    State.NOTIFY:       [State.IDLE, State.DONE],
-    State.ERROR:        [State.NOTIFY, State.IDLE],
-    State.DONE:         [],
+TRANSITIONS: Dict[State, List[State]] = {
+    State.IDLE:       [State.VERIFY, State.DONE],
+    State.VERIFY:     [State.IDENTITY, State.ERROR],
+    State.IDENTITY:   [State.DEPENDENCY, State.ERROR],
+    State.DEPENDENCY: [State.HEALTH, State.ERROR],
+    State.HEALTH:     [State.BUILD, State.REPAIR, State.ERROR],
+    State.BUILD:      [State.RELEASE, State.REPAIR, State.ERROR],
+    State.REPAIR:     [State.BUILD, State.NOTIFY, State.ERROR],
+    State.RELEASE:    [State.NOTIFY, State.ERROR],
+    State.NOTIFY:     [State.IDLE, State.DONE],
+    State.ERROR:      [State.NOTIFY, State.IDLE],
+    State.DONE:       [],
 }
+
+DEFAULT_PIPELINE: List[State] = [
+    State.VERIFY,
+    State.IDENTITY,
+    State.DEPENDENCY,
+    State.HEALTH,
+    State.BUILD,
+    State.RELEASE,
+    State.NOTIFY,
+    State.DONE,
+]
 
 
 class StateMachine:
@@ -40,17 +55,17 @@ class StateMachine:
 
     def __init__(self, initial: State = State.IDLE):
         self.state   = initial
-        self.history = [initial]
+        self.history: List[State] = [initial]
         self._handlers: Dict[State, Callable] = {}
 
-    def register(self, state: State, handler: Callable):
-        """Register a callable to run when entering a state."""
+    def register(self, state: State, handler: Callable) -> None:
         self._handlers[state] = handler
 
     def transition(self, next_state: State) -> bool:
         allowed = TRANSITIONS.get(self.state, [])
         if next_state not in allowed:
-            log.error("[state_machine] invalid transition %s → %s", self.state, next_state)
+            log.error("[state_machine] invalid transition %s → %s",
+                      self.state.name, next_state.name)
             return False
         log.info("[state_machine] %s → %s", self.state.name, next_state.name)
         self.state = next_state
@@ -60,36 +75,35 @@ class StateMachine:
             handler()
         return True
 
-    def run_until_done(self, transitions: list):
-        """Drive the machine through a pre-planned list of states."""
-        for next_state in transitions:
+    def run_pipeline(self, pipeline: Optional[List[State]] = None) -> bool:
+        """Drive the machine through a list of states. Returns True if DONE."""
+        for next_state in (pipeline or DEFAULT_PIPELINE):
             if not self.transition(next_state):
-                self.transition(State.ERROR)
-                break
+                self.state = State.ERROR
+                self.history.append(State.ERROR)
+                return False
             if self.state == State.DONE:
-                break
+                return True
+        return self.state == State.DONE
 
     def summary(self) -> dict:
         return {
             "current": self.state.name,
             "history": [s.name for s in self.history],
+            "done":    self.state == State.DONE,
         }
 
 
-def main():
+def main() -> None:
+    logging.basicConfig(level=logging.INFO,
+                        format="%(levelname)s:%(name)s:%(message)s")
     sm = StateMachine()
-    sm.run_until_done([
-        State.HEALTH_CHECK,
-        State.BUILD,
-        State.TEST,
-        State.RELEASE,
-        State.NOTIFY,
-        State.DONE,
-    ])
+    success = sm.run_pipeline()
     import json
     print(json.dumps(sm.summary(), indent=2))
+    return 0 if success else 1
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    main()
+    import sys
+    sys.exit(main())
