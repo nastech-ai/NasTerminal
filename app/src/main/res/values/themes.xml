@@ -74,11 +74,13 @@
         <item name="cornerRadius">12dp</item>
     </style>
 
-    <!-- NasTech Settings theme -->
+    <!-- NasTech Settings theme (single definition — duplicate in styles.xml removed) -->
     <style name="Theme.NasTech.Settings" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="android:windowBackground">@color/nastech_bg_surface</item>
         <item name="colorPrimary">@color/nastech_accent</item>
+        <item name="colorPrimaryVariant">@color/nastech_header_bg</item>
         <item name="colorSurface">@color/nastech_bg_surface</item>
+        <item name="android:statusBarColor">@color/nastech_header_bg</item>
         <item name="android:textColorPrimary">@color/nastech_text</item>
         <item name="android:textColorSecondary">@color/nastech_text_dim</item>
     </style>
