@@ -202,7 +202,7 @@ jobs:
           key: gradle-${{ hashFiles('**/*.gradle*') }}
 
       - name: Download Identity Profile
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: guardian-identity-profile
 
@@ -254,7 +254,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Download Identity Profile
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: guardian-identity-profile
 
@@ -325,7 +325,7 @@ jobs:
           key: gradle-${{ hashFiles('**/*.gradle*') }}
 
       - name: Download Identity Profile
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: guardian-identity-profile
 
@@ -388,7 +388,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Download Reports
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: guardian-*-report
           merge-multiple: true
@@ -460,7 +460,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Download Build Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: guardian-*
           merge-multiple: true
@@ -523,7 +523,7 @@ jobs:
         run: pip install requests --quiet
 
       - name: Download All Reports
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: guardian-*
           merge-multiple: true
