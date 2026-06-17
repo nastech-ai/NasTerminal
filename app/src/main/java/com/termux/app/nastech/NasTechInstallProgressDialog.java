@@ -28,7 +28,7 @@ import java.util.concurrent.Executors;
  */
 public class NasTechInstallProgressDialog {
 
-    private static final String TERMUX_BASH = "/data/data/com.termux/files/usr/bin/bash";
+    // No hardcoded path — derived from NasTechManager at runtime
 
     /**
      * Show the progress dialog and start the installer.
@@ -81,7 +81,8 @@ public class NasTechInstallProgressDialog {
                 "──────────────────────────────────────────────", false);
 
             try {
-                ProcessBuilder pb = new ProcessBuilder(TERMUX_BASH, installScript);
+                ProcessBuilder pb = new ProcessBuilder(
+                        NasTechManager.getTermuxBin("bash"), installScript);
                 pb.environment().put("NASTECH_HOME", NasTechManager.getNasTechHome());
                 pb.environment().put("GROQ_API_KEY",       NasTechManager.getGroqApiKey());
                 pb.environment().put("GEMINI_API_KEY",     NasTechManager.getGeminiApiKey());

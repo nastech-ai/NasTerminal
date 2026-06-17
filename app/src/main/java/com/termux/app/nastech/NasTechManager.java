@@ -20,9 +20,6 @@ import java.io.InputStream;
  */
 public class NasTechManager {
 
-    // Termux shell interpreter — never use /bin/bash (that's Linux)
-    private static final String TERMUX_BASH = "/data/data/com.termux/files/usr/bin/bash";
-
     // NasTech Agent one-line installer (auto-detects Termux vs Linux vs macOS)
     private static final String AGENT_INSTALLER_URL =
         "https://raw.githubusercontent.com/nastech-ai/NasTech-Agent/main/scripts/install.sh";
@@ -116,7 +113,7 @@ public class NasTechManager {
      */
     private static void writeInstallerScript(File dir) {
         String script =
-            "#!" + TERMUX_BASH + "\n" +
+            "#!" + getTermuxBin("bash") + "\n" +
             "# NasTech AI Terminal — Agent Installer\n" +
             "# Calls the official NasTech Agent installer (auto-detects Termux)\n\n" +
 
@@ -166,7 +163,7 @@ public class NasTechManager {
         String orKey       = prefs.getString(KEY_OR_KEY, "");
 
         String rc =
-            "#!" + TERMUX_BASH + "\n" +
+            "#!" + getTermuxBin("bash") + "\n" +
             "# NasTech AI Terminal — Auto-generated (do not edit)\n" +
             "export NASTECH_HOME=\""       + nasTechHome + "\"\n" +
             "export NASTECH_VERSION=\"v6\"\n" +
@@ -276,7 +273,7 @@ public class NasTechManager {
     private static void writeSpeakScript(File dir) {
         // Termux-specific: uses pkg (not apt), termux-media-player or mpv
         String script =
-            "#!" + TERMUX_BASH + "\n" +
+            "#!" + getTermuxBin("bash") + "\n" +
             "# NasTech AI Terminal — Piper TTS (Termux)\n" +
             "# Uses pkg to install, not apt/apt-get (Termux doesn't have those)\n" +
             "PIPER_DIR=\"$NASTECH_HOME/piper\"\n" +
@@ -382,6 +379,17 @@ public class NasTechManager {
     /** Call immediately before showing the overlay so it never shows twice. */
     public static void clearInstallOverlay() {
         getPrefs().edit().putBoolean(KEY_SHOW_OVERLAY, false).apply();
+    }
+
+    /**
+     * Returns the path to a binary inside the Termux prefix for the current install.
+     * Derived from context — never hardcoded — so it works even if the applicationId changes.
+     *   e.g. getTermuxBin("bash")    → /data/data/com.termux/files/usr/bin/bash
+     *        getTermuxBin("python3") → /data/data/com.termux/files/usr/bin/python3
+     */
+    public static String getTermuxBin(String binary) {
+        // context.getFilesDir() = /data/data/<packageName>/files
+        return sAppContext.getFilesDir().getAbsolutePath() + "/usr/bin/" + binary;
     }
 
     /** Full path to ~/.nastech — where ai_coordinator.py and all scripts live. */

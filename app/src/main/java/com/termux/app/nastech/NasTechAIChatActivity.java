@@ -35,7 +35,8 @@ import java.util.concurrent.Executors;
  */
 public class NasTechAIChatActivity extends AppCompatActivity {
 
-    private static final String PYTHON3 = "/data/data/com.termux/files/usr/bin/python3";
+    // Derived at runtime — correct for any package name (com.termux or a rename)
+    private String mPython3;
 
     private LinearLayout mChatContainer;
     private ScrollView   mScrollView;
@@ -54,6 +55,9 @@ public class NasTechAIChatActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_nastech_ai_chat);
+
+        // Derive python3 path from context — never hardcoded
+        mPython3 = NasTechManager.getTermuxBin("python3");
 
         mChatContainer = findViewById(R.id.nastech_chat_container);
         mScrollView    = findViewById(R.id.nastech_chat_scroll);
@@ -117,7 +121,7 @@ public class NasTechAIChatActivity extends AppCompatActivity {
 
         try {
             ProcessBuilder pb = new ProcessBuilder(
-                PYTHON3, coordinator,
+                mPython3, coordinator,
                 "--prompt", fullPrompt,
                 "--system", system,
                 "--json-output"
