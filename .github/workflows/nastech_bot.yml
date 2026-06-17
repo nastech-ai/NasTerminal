@@ -30,7 +30,7 @@ jobs:
       fixes: ${{ steps.analyze.outputs.fixes }}
       severity: ${{ steps.analyze.outputs.severity }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -145,7 +145,7 @@ jobs:
     name: Dependency Graph Diff
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
@@ -283,8 +283,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule' || github.event.inputs.action == 'digest'
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - run: pip install requests --quiet
@@ -306,8 +306,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.inputs.action == 'test' || github.event_name == 'workflow_dispatch'
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Syntax check
