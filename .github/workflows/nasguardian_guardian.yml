@@ -45,7 +45,7 @@ jobs:
       owner:     ${{ steps.v.outputs.owner }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Verify
         id: v
@@ -93,7 +93,7 @@ jobs:
       build_system:   ${{ steps.id.outputs.build_system }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -147,7 +147,7 @@ jobs:
       dep_status: ${{ steps.deps.outputs.status }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -199,7 +199,7 @@ jobs:
       critical_count: ${{ steps.health.outputs.critical_count }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -252,7 +252,7 @@ jobs:
       error_count:     ${{ steps.val.outputs.error_count }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -328,7 +328,7 @@ jobs:
       release_tag:    ${{ steps.rel.outputs.tag }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -386,7 +386,7 @@ jobs:
     if: always()
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}

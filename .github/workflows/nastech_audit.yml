@@ -20,7 +20,7 @@ jobs:
     name: Gradle Dependency Audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
@@ -87,7 +87,7 @@ jobs:
     name: Circular Dependency Detection
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Python
         uses: actions/setup-python@v6
@@ -112,7 +112,7 @@ jobs:
     name: Packaging & Release Audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
@@ -193,7 +193,7 @@ jobs:
     name: Environment Variable Audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Scan for Required Env Vars
         shell: bash
