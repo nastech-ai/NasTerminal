@@ -558,7 +558,7 @@ jobs:
     steps:
       - name: Post Combined Report to PR
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const dep    = `${{ needs.dependency-scan.outputs.dep_status }}`;
@@ -601,7 +601,7 @@ jobs:
            needs.test-scan.outputs.test_status == 'fail' ||
            needs.termux-health-check.outputs.termux_status == 'fail' ||
            needs.security-scan.outputs.security_status == 'fail')
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const dep    = `${{ needs.dependency-scan.outputs.dep_status }}`;
