@@ -52,7 +52,7 @@ jobs:
       guardian_run_id: ${{ steps.verify.outputs.run_id }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Verify Organization & Repository
         id: verify
@@ -120,12 +120,12 @@ jobs:
       priority:       ${{ steps.identity.outputs.priority }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -180,7 +180,7 @@ jobs:
       broken:      ${{ steps.deps.outputs.broken }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
@@ -189,7 +189,7 @@ jobs:
           java-version: '17'
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -202,7 +202,7 @@ jobs:
           key: gradle-${{ hashFiles('**/*.gradle*') }}
 
       - name: Download Identity Profile
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: guardian-identity-profile
 
@@ -246,15 +246,15 @@ jobs:
       critical_count: ${{ steps.health.outputs.critical_count }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Download Identity Profile
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: guardian-identity-profile
 
@@ -303,7 +303,7 @@ jobs:
       failure_reason: ${{ steps.build.outputs.failure_reason }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
@@ -312,7 +312,7 @@ jobs:
           java-version: '17'
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -325,7 +325,7 @@ jobs:
           key: gradle-${{ hashFiles('**/*.gradle*') }}
 
       - name: Download Identity Profile
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: guardian-identity-profile
 
@@ -377,18 +377,18 @@ jobs:
       patch_count:   ${{ steps.repair.outputs.patch_count }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Download Reports
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           pattern: guardian-*-report
           merge-multiple: true
@@ -450,17 +450,17 @@ jobs:
       changelog_lines: ${{ steps.release.outputs.changelog_lines }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Download Build Artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           pattern: guardian-*
           merge-multiple: true
@@ -512,10 +512,10 @@ jobs:
       final_state: ${{ steps.notify.outputs.final_state }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -523,7 +523,7 @@ jobs:
         run: pip install requests --quiet
 
       - name: Download All Reports
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           pattern: guardian-*
           merge-multiple: true
