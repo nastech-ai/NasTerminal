@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/nastech_dialog_bg">
+
+    <!-- ── Header ─────────────────────────────────────────────────────── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@color/nastech_header_bg"
+        android:paddingStart="16dp"
+        android:paddingEnd="12dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⬡ NasTech Agent Installer"
+                android:textColor="@color/nastech_accent"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:fontFamily="monospace" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="First Boot — setting up AI engine"
+                android:textColor="@color/nastech_text_dim"
+                android:textSize="11sp"
+                android:fontFamily="monospace" />
+
+        </LinearLayout>
+
+        <ProgressBar
+            android:id="@+id/nastech_install_progress"
+            style="?android:attr/progressBarStyleSmall"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:indeterminateTint="@color/nastech_accent" />
+
+    </LinearLayout>
+
+    <!-- ── Thin progress strip ────────────────────────────────────────── -->
+    <ProgressBar
+        android:id="@+id/nastech_install_strip"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:indeterminate="true"
+        android:indeterminateTint="@color/nastech_accent" />
+
+    <!-- ── Terminal log ───────────────────────────────────────────────── -->
+    <ScrollView
+        android:id="@+id/nastech_install_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="@color/nastech_terminal_bg"
+        android:padding="12dp"
+        android:fadeScrollbars="true">
+
+        <TextView
+            android:id="@+id/nastech_install_log"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/nastech_log_green"
+            android:textSize="12sp"
+            android:fontFamily="monospace"
+            android:lineSpacingMultiplier="1.3"
+            android:textIsSelectable="true"
+            android:text="" />
+
+    </ScrollView>
+
+    <!-- ── Status bar ─────────────────────────────────────────────────── -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@color/nastech_header_bg"
+        android:paddingStart="14dp"
+        android:paddingEnd="10dp">
+
+        <TextView
+            android:id="@+id/nastech_install_status"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Installing…"
+            android:textColor="@color/nastech_text_dim"
+            android:textSize="12sp"
+            android:fontFamily="monospace" />
+
+        <Button
+            android:id="@+id/nastech_install_bg"
+            style="?attr/borderlessButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="Run in background"
+            android:textColor="@color/nastech_text_dim"
+            android:textSize="12sp"
+            android:textAllCaps="false"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/nastech_install_dismiss"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="Done  ✓"
+            android:textColor="@color/nastech_bg"
+            android:backgroundTint="@color/nastech_accent"
+            android:textSize="12sp"
+            android:textAllCaps="false"
+            android:visibility="gone"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp" />
+
+    </LinearLayout>
+
+</LinearLayout>

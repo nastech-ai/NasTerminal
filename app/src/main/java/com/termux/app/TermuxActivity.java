@@ -427,6 +427,12 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
                             launchFailsafe = intent.getExtras().getBoolean(TERMUX_ACTIVITY.EXTRA_FAILSAFE_SESSION, false);
                         }
                         mTermuxTerminalSessionActivityClient.addNewSession(launchFailsafe, null);
+                        // NasTech: show install progress overlay on first boot (after bootstrap)
+                        if (NasTechManager.shouldShowInstallOverlay()) {
+                            NasTechManager.clearInstallOverlay();
+                            com.termux.app.nastech.NasTechInstallProgressDialog
+                                .show(TermuxActivity.this);
+                        }
                     } catch (WindowManager.BadTokenException e) {
                         // Activity finished - ignore.
                     }

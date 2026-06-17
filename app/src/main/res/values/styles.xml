@@ -14,4 +14,21 @@
         <item name="android:textColor">@color/white</item>
     </style>
 
+    <!-- NasTech install progress overlay dialog -->
+    <style name="NasTechInstallDialogTheme" parent="@android:style/Theme.Material.Dialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:colorAccent">@color/nastech_accent</item>
+    </style>
+
+    <!-- NasTech Settings screen theme -->
+    <style name="Theme.NasTech.Settings" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/nastech_accent</item>
+        <item name="colorPrimaryVariant">@color/nastech_header_bg</item>
+        <item name="android:windowBackground">@color/nastech_bg_surface</item>
+        <item name="android:statusBarColor">@color/nastech_header_bg</item>
+    </style>
+
 </resources>

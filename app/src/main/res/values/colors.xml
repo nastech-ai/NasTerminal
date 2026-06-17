@@ -21,4 +21,7 @@
     <color name="nastech_divider">#1E1E30</color>
     <color name="nastech_quick_btn_bg">#141428</color>
     <color name="nastech_quick_btn_text">#00C8FF</color>
+    <!-- Install progress dialog -->
+    <color name="nastech_terminal_bg">#060610</color>
+    <color name="nastech_log_green">#39FF85</color>
 </resources>

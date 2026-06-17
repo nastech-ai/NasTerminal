@@ -35,9 +35,11 @@ public class NasTechManager {
     private static final String KEY_OR_KEY       = "openrouter_api_key";
 
     // Marker file name written into ~/.nastech/ on very first init
-    private static final String FIRST_BOOT_MARKER = ".first_boot_pending";
+    private static final String FIRST_BOOT_MARKER    = ".first_boot_pending";
     // Written by installer when it completes successfully
-    private static final String INSTALLED_MARKER  = ".agent_installed";
+    private static final String INSTALLED_MARKER     = ".agent_installed";
+    // SharedPrefs key: show install overlay once on first boot
+    private static final String KEY_SHOW_OVERLAY     = "nastech_show_install_overlay";
 
     private static Context sAppContext;
 
@@ -52,6 +54,7 @@ public class NasTechManager {
             prefs.edit()
                 .putBoolean(KEY_INITIALIZED, true)
                 .putBoolean(KEY_BIOMETRIC, false)
+                .putBoolean(KEY_SHOW_OVERLAY, true)   // show install overlay once
                 .apply();
         }
 
@@ -370,6 +373,16 @@ public class NasTechManager {
 
     public static boolean isBiometricLockEnabled() { return getPrefs().getBoolean(KEY_BIOMETRIC, false); }
     public static void setBiometricLock(boolean e) { getPrefs().edit().putBoolean(KEY_BIOMETRIC, e).apply(); }
+
+    /** True once on first boot — triggers the install progress overlay in TermuxActivity. */
+    public static boolean shouldShowInstallOverlay() {
+        return getPrefs().getBoolean(KEY_SHOW_OVERLAY, false);
+    }
+
+    /** Call immediately before showing the overlay so it never shows twice. */
+    public static void clearInstallOverlay() {
+        getPrefs().edit().putBoolean(KEY_SHOW_OVERLAY, false).apply();
+    }
 
     /** Full path to ~/.nastech — where ai_coordinator.py and all scripts live. */
     public static String getNasTechHome() {
