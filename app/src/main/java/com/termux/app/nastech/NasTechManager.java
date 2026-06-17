@@ -2,128 +2,340 @@ package com.termux.app.nastech;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.os.Build;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 
 /**
- * NasTech AI Terminal System — Core Manager
- * Handles startup init, environment setup, and $ command injection.
+ * NasTech AI Terminal — Core Manager
+ *
+ * On first boot, drops a marker file that nastech_init.sh picks up to run the official
+ * NasTech Agent installer (auto-detects Termux) in the background.
+ * The "$ nastech install" command calls the same script on demand.
+ *
+ * All AI logic lives in ai_coordinator.py (NasTech Agent). This class is Android/Termux
+ * plumbing only — no AI code is duplicated here.
  */
 public class NasTechManager {
 
-    private static final String PREFS = "nastech_prefs";
-    private static final String KEY_INITIALIZED = "nastech_initialized";
-    private static final String KEY_AI_MODEL = "nastech_ai_model";
-    private static final String KEY_BIOMETRIC = "biometric_lock";
-    private static final String KEY_API_KEY = "openrouter_api_key";
+    // Termux shell interpreter — never use /bin/bash (that's Linux)
+    private static final String TERMUX_BASH = "/data/data/com.termux/files/usr/bin/bash";
+
+    // NasTech Agent one-line installer (auto-detects Termux vs Linux vs macOS)
+    private static final String AGENT_INSTALLER_URL =
+        "https://raw.githubusercontent.com/nastech-ai/NasTech-Agent/main/scripts/install.sh";
+
+    private static final String PREFS            = "nastech_prefs";
+    private static final String KEY_INITIALIZED  = "nastech_initialized";
+    private static final String KEY_BIOMETRIC    = "biometric_lock";
+    private static final String KEY_GROQ_KEY     = "groq_api_key";
+    private static final String KEY_GEMINI_KEY   = "gemini_api_key";
+    private static final String KEY_OR_KEY       = "openrouter_api_key";
+
+    // Marker file name written into ~/.nastech/ on very first init
+    private static final String FIRST_BOOT_MARKER = ".first_boot_pending";
+    // Written by installer when it completes successfully
+    private static final String INSTALLED_MARKER  = ".agent_installed";
 
     private static Context sAppContext;
+
+    // ── Public init ───────────────────────────────────────────────────────────
 
     public static void init(Context context) {
         sAppContext = context.getApplicationContext();
         SharedPreferences prefs = sAppContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
 
-        // Set sensible defaults on first run
-        if (!prefs.getBoolean(KEY_INITIALIZED, false)) {
+        boolean firstRun = !prefs.getBoolean(KEY_INITIALIZED, false);
+        if (firstRun) {
             prefs.edit()
                 .putBoolean(KEY_INITIALIZED, true)
-                .putString(KEY_AI_MODEL, "openai/gpt-4o")
                 .putBoolean(KEY_BIOMETRIC, false)
                 .apply();
         }
 
-        // Ensure NasTech home directory exists on device
-        File nasTechDir = new File(System.getenv("HOME") != null
-            ? System.getenv("HOME") + "/.nastech"
-            : context.getFilesDir() + "/.nastech");
+        String home = System.getenv("HOME") != null
+            ? System.getenv("HOME") : context.getFilesDir().getParent();
+
+        File nasTechDir = new File(home, ".nastech");
         if (!nasTechDir.exists()) nasTechDir.mkdirs();
 
-        // Write the NasTech shell init ($ command prefix + AI stub)
-        writeNasTechInit(nasTechDir, prefs.getString(KEY_API_KEY, ""));
+        // 1. Deploy ai_coordinator.py from APK assets → ~/.nastech/
+        copyAsset(context, "ai_coordinator.py", new File(nasTechDir, "ai_coordinator.py"));
+
+        // 2. Write thin nastech_ai.py wrapper that delegates to ai_coordinator.py
+        writeAIWrapper(nasTechDir);
+
+        // 3. Write speak script (TTS — Termux-specific, not in agent)
+        writeSpeakScript(nasTechDir);
+
+        // 4. Write the NasTech Agent installer script (calls remote URL)
+        writeInstallerScript(nasTechDir);
+
+        // 5. Drop first-boot marker so the shell auto-runs the installer once
+        if (firstRun) {
+            dropFirstBootMarker(nasTechDir);
+        }
+
+        // 6. Write shell init that exports all API keys + wires commands
+        writeShellInit(nasTechDir, home, prefs);
     }
 
-    private static void writeNasTechInit(File dir, String apiKey) {
-        String nasTechHome = dir.getAbsolutePath();
+    // ── Asset deployment ──────────────────────────────────────────────────────
 
-        // Fixed: use bash function syntax instead of alias for '$' (alias doesn't work for special chars)
-        // Also expose 'nastech', 'ai', and 'speak' as direct commands — no prefix needed
-        String rcContent =
-            "# NasTech AI Terminal System v6 — Auto-generated\n" +
-            "export NASTECH_HOME=\"" + nasTechHome + "\"\n" +
-            "export NASTECH_MODEL=\"openai/gpt-4o\"\n" +
+    private static void copyAsset(Context ctx, String assetName, File dest) {
+        try (InputStream in = ctx.getAssets().open(assetName);
+             FileOutputStream out = new FileOutputStream(dest)) {
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+            dest.setExecutable(true, false);
+        } catch (IOException ignored) {}
+    }
+
+    // ── First-boot marker ─────────────────────────────────────────────────────
+
+    private static void dropFirstBootMarker(File dir) {
+        try {
+            new File(dir, FIRST_BOOT_MARKER).createNewFile();
+        } catch (IOException ignored) {}
+    }
+
+    // ── Installer script — calls the remote NasTech Agent URL ─────────────────
+
+    /**
+     * nastech_install.sh:
+     *   - Uses Termux bash (not /bin/bash)
+     *   - Ensures curl is available via pkg (Termux package manager)
+     *   - Calls the official installer URL which auto-detects Termux
+     *   - Does NOT call sudo, apt, apt-get — Termux doesn't use those
+     */
+    private static void writeInstallerScript(File dir) {
+        String script =
+            "#!" + TERMUX_BASH + "\n" +
+            "# NasTech AI Terminal — Agent Installer\n" +
+            "# Calls the official NasTech Agent installer (auto-detects Termux)\n\n" +
+
+            "NASTECH_HOME=\"${NASTECH_HOME:-" + dir.getAbsolutePath() + "}\"\n" +
+            "INSTALLED_MARKER=\"$NASTECH_HOME/" + INSTALLED_MARKER + "\"\n\n" +
+
+            "echo -e \"\\033[1;36m⬡ NasTech Agent Installer\\033[0m\"\n" +
+            "echo -e \"\\033[0;90m  Termux detected — using pkg, no sudo\\033[0m\"\n\n" +
+
+            "# Ensure curl is present (Termux — use pkg, never apt-get)\n" +
+            "if ! command -v curl &>/dev/null; then\n" +
+            "  echo -e \"\\033[1;33m[→] Installing curl via pkg…\\033[0m\"\n" +
+            "  pkg install -y curl 2>/dev/null || true\n" +
+            "fi\n\n" +
+
+            "if ! command -v curl &>/dev/null; then\n" +
+            "  echo -e \"\\033[1;31m[✗] curl unavailable. Run: pkg install curl\\033[0m\"\n" +
+            "  exit 1\n" +
+            "fi\n\n" +
+
+            "echo -e \"\\033[0;90m  Running: curl -fsSL " + AGENT_INSTALLER_URL + " | bash\\033[0m\"\n" +
+            "curl -fsSL \"" + AGENT_INSTALLER_URL + "\" | bash\n" +
+            "STATUS=$?\n\n" +
+
+            "if [ $STATUS -eq 0 ]; then\n" +
+            "  touch \"$INSTALLED_MARKER\"\n" +
+            "  echo -e \"\\033[1;32m[✓] NasTech Agent installed\\033[0m\"\n" +
+            "else\n" +
+            "  echo -e \"\\033[1;31m[✗] Installer returned $STATUS — check your connection\\033[0m\"\n" +
+            "fi\n";
+
+        try {
+            File f = new File(dir, "nastech_install.sh");
+            try (FileOutputStream fos = new FileOutputStream(f)) {
+                fos.write(script.getBytes());
+            }
+            f.setExecutable(true, false);
+        } catch (IOException ignored) {}
+    }
+
+    // ── Shell init ────────────────────────────────────────────────────────────
+
+    private static void writeShellInit(File dir, String homeDir, SharedPreferences prefs) {
+        String nasTechHome = dir.getAbsolutePath();
+        String groqKey     = prefs.getString(KEY_GROQ_KEY, "");
+        String geminiKey   = prefs.getString(KEY_GEMINI_KEY, "");
+        String orKey       = prefs.getString(KEY_OR_KEY, "");
+
+        String rc =
+            "#!" + TERMUX_BASH + "\n" +
+            "# NasTech AI Terminal — Auto-generated (do not edit)\n" +
+            "export NASTECH_HOME=\""       + nasTechHome + "\"\n" +
             "export NASTECH_VERSION=\"v6\"\n" +
-            "export OPENROUTER_API_KEY=\"" + apiKey + "\"\n\n" +
-            "# Core command dispatcher\n" +
+            "export GROQ_API_KEY=\""       + groqKey     + "\"\n" +
+            "export GEMINI_API_KEY=\""     + geminiKey   + "\"\n" +
+            "export OPENROUTER_API_KEY=\"" + orKey       + "\"\n\n" +
+
+            // ── First-boot auto-installer ──────────────────────────────
+            // Runs once silently in the background when the marker exists.
+            // After it finishes (or if already installed), marker is removed.
+            "if [ -f \"$NASTECH_HOME/" + FIRST_BOOT_MARKER + "\" ]; then\n" +
+            "  if [ ! -f \"$NASTECH_HOME/" + INSTALLED_MARKER + "\" ]; then\n" +
+            "    echo -e \"\\033[1;36m⬡ First boot — installing NasTech Agent in background…\\033[0m\"\n" +
+            "    echo -e \"\\033[0;90m  Progress will print below. Use the terminal freely.\\033[0m\"\n" +
+            "    # Run installer in background so the shell prompt appears immediately\n" +
+            "    ( bash \"$NASTECH_HOME/nastech_install.sh\" ) &\n" +
+            "  fi\n" +
+            "  rm -f \"$NASTECH_HOME/" + FIRST_BOOT_MARKER + "\"\n" +
+            "fi\n\n" +
+
+            // ── Command dispatcher ────────────────────────────────────
             "nastech_cmd() {\n" +
             "  local cmd=\"$1\"; shift\n" +
             "  case \"$cmd\" in\n" +
-            "    ai)       python3 \"$NASTECH_HOME/nastech_ai.py\" \"$@\" ;;\n" +
-            "    speak)    bash \"$NASTECH_HOME/nastech_speak.sh\" \"$@\" ;;\n" +
-            "    ubuntu)   bash \"$NASTECH_HOME/ubuntu_layer.sh\" \"$@\" ;;\n" +
-            "    install)  bash \"$NASTECH_HOME/nastech_engine_v6.sh\" \"$@\" ;;\n" +
-            "    system)   python3 \"$NASTECH_HOME/nastech_audit.py\" \"$@\" ;;\n" +
-            "    git)      bash \"$NASTECH_HOME/nastech_git.sh\" \"$@\" ;;\n" +
+            "    ai)      python3 \"$NASTECH_HOME/nastech_ai.py\" \"$@\" ;;\n" +
+            "    speak)   bash \"$NASTECH_HOME/nastech_speak.sh\" \"$@\" ;;\n" +
+            "    ubuntu)  bash \"$NASTECH_HOME/ubuntu_layer.sh\" \"$@\" ;;\n" +
+            "    install) bash \"$NASTECH_HOME/nastech_install.sh\" \"$@\" ;;\n" +
+            "    agent)   python3 \"$NASTECH_HOME/ai_coordinator.py\" \"$@\" ;;\n" +
+            "    system)  python3 \"$NASTECH_HOME/ai_coordinator.py\" --prompt \"system audit: report Termux packages, storage, Python version, and agent status\" ;;\n" +
             "    help)\n" +
-            "      echo -e \"\\033[1;36m\\u29e1 NasTech AI Terminal v6\\033[0m\"\n" +
-            "      echo -e \"\\033[0;90m  Usage: ai [prompt]  or  nastech [cmd]\\033[0m\"\n" +
+            "      echo -e \"\\033[1;36m⬡ NasTech AI Terminal v6\\033[0m\"\n" +
+            "      echo -e \"\\033[0;90m  Powered by NasTech Agent (Groq → Gemini → OpenRouter)\\033[0m\"\n" +
             "      echo \"\"\n" +
-            "      echo \"  ai [prompt]    Stream AI (OpenRouter)\"\n" +
-            "      echo \"  speak [text]   Piper TTS offline voice\"\n" +
-            "      echo \"  ubuntu         Ubuntu proot shell\"\n" +
-            "      echo \"  install [pkg]  NasTech v6 installer\"\n" +
-            "      echo \"  system         System audit\"\n" +
-            "      echo \"  git [cmd]      Git operations\"\n" +
+            "      echo \"  ai [prompt]      Ask the AI\"\n" +
+            "      echo \"  nastech install  Install/update NasTech Agent\"\n" +
+            "      echo \"  speak [text]     Piper TTS offline voice\"\n" +
+            "      echo \"  ubuntu           Ubuntu proot shell\"\n" +
+            "      echo \"  agent --help     Raw ai_coordinator.py CLI\"\n" +
+            "      echo \"  nastech system   System audit\"\n" +
             "      ;;\n" +
-            "    *) echo \"Unknown command: $cmd — try: nastech help\" ;;\n" +
+            "    *) echo \"Unknown: $cmd — try: nastech help\" ;;\n" +
             "  esac\n" +
             "}\n\n" +
-            "# Direct commands — type: ai hello world\n" +
             "nastech() { nastech_cmd \"$@\"; }\n" +
             "ai()      { nastech_cmd ai \"$@\"; }\n" +
             "speak()   { nastech_cmd speak \"$@\"; }\n\n" +
-            "echo -e \"\\033[1;36m\\u29e1 NasTech AI Terminal v6 — ready\\033[0m\"\n" +
-            "echo -e \"\\033[0;90m  ai [prompt]   speak [text]   nastech help\\033[0m\"\n";
-
-        // Write scripts alongside the init script
-        writeSpeakScript(dir);
-        writeAIScript(dir);
+            "echo -e \"\\033[1;36m⬡ NasTech AI Terminal v6\\033[0m\"\n" +
+            "echo -e \"\\033[0;90m  ai [prompt]   speak [text]   nastech help   nastech install\\033[0m\"\n";
 
         try {
             File rcFile = new File(dir, "nastech_init.sh");
             try (FileOutputStream fos = new FileOutputStream(rcFile)) {
-                fos.write(rcContent.getBytes());
+                fos.write(rc.getBytes());
             }
 
-            // Fixed: hardcode NASTECH_HOME in source line (var not set yet when rc is read)
-            // Fixed: write to BOTH .bash_profile AND .bashrc
-            //   Termux opens LOGIN shells → sources .bash_profile (not .bashrc)
-            //   .bashrc is for non-login interactive shells
             String sourceLine =
                 "\n# NasTech AI Terminal\n" +
                 "export NASTECH_HOME=\"" + nasTechHome + "\"\n" +
                 ". \"" + nasTechHome + "/nastech_init.sh\"\n";
 
-            String homeDir = System.getenv("HOME") != null
-                ? System.getenv("HOME")
-                : sAppContext.getFilesDir().getParent();
-
-            // Write to .bash_profile (Termux default — login shell)
+            // Termux opens LOGIN shells → .bash_profile; also cover .bashrc
             appendIfMissing(new File(homeDir, ".bash_profile"), sourceLine, "nastech_init.sh");
-            // Write to .bashrc (non-login interactive shells)
-            appendIfMissing(new File(homeDir, ".bashrc"), sourceLine, "nastech_init.sh");
-
+            appendIfMissing(new File(homeDir, ".bashrc"),       sourceLine, "nastech_init.sh");
         } catch (IOException ignored) {}
     }
 
+    // ── nastech_ai.py — thin wrapper around ai_coordinator.py ─────────────────
+
+    private static void writeAIWrapper(File dir) {
+        // Android-specific glue only — all AI logic stays in ai_coordinator.py
+        String wrapper =
+            "#!/usr/bin/env python3\n" +
+            "# NasTech AI — delegates to ai_coordinator.py (NasTech Agent)\n" +
+            "# This file is Android/Termux glue, not a copy of the AI logic.\n" +
+            "import sys, os, subprocess\n\n" +
+            "home = os.environ.get('NASTECH_HOME',\n" +
+            "        os.path.join(os.path.expanduser('~'), '.nastech'))\n" +
+            "coordinator = os.path.join(home, 'ai_coordinator.py')\n\n" +
+            "if len(sys.argv) < 2:\n" +
+            "    print('\\033[1;36m⬡ NasTech AI — powered by NasTech Agent\\033[0m')\n" +
+            "    print('  Usage : ai [prompt]')\n" +
+            "    print('  Chain : Groq llama-3.3-70b → Gemini 2.0-flash → OpenRouter')\n" +
+            "    sys.exit(0)\n\n" +
+            "if not os.path.exists(coordinator):\n" +
+            "    print('\\033[1;31m✗ ai_coordinator.py missing.\\033[0m')\n" +
+            "    print('  Run: nastech install')\n" +
+            "    sys.exit(1)\n\n" +
+            "prompt = ' '.join(sys.argv[1:])\n" +
+            "result = subprocess.run(\n" +
+            "    ['python3', coordinator, '--prompt', prompt],\n" +
+            "    env=os.environ.copy()\n" +
+            ")\n" +
+            "sys.exit(result.returncode)\n";
+
+        try {
+            File f = new File(dir, "nastech_ai.py");
+            try (FileOutputStream fos = new FileOutputStream(f)) {
+                fos.write(wrapper.getBytes());
+            }
+            f.setExecutable(true, false);
+        } catch (IOException ignored) {}
+    }
+
+    // ── Speak script — Termux TTS (not in agent) ──────────────────────────────
+
+    private static void writeSpeakScript(File dir) {
+        // Termux-specific: uses pkg (not apt), termux-media-player or mpv
+        String script =
+            "#!" + TERMUX_BASH + "\n" +
+            "# NasTech AI Terminal — Piper TTS (Termux)\n" +
+            "# Uses pkg to install, not apt/apt-get (Termux doesn't have those)\n" +
+            "PIPER_DIR=\"$NASTECH_HOME/piper\"\n" +
+            "VOICE_DIR=\"$NASTECH_HOME/voices\"\n" +
+            "VOICE_MODEL=\"$VOICE_DIR/en_US-lessac-medium.onnx\"\n" +
+            "VOICE_URL=\"https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium\"\n" +
+            "TMP_WAV=\"/tmp/nastech_speak.wav\"\n" +
+            "TEXT=\"$*\"\n" +
+            "[ -z \"$TEXT\" ] && { echo 'Usage: speak [text]'; exit 0; }\n\n" +
+
+            "# Termux: install curl/mpv via pkg if missing — no sudo\n" +
+            "command -v curl &>/dev/null || pkg install -y curl 2>/dev/null || true\n\n" +
+
+            "if ! command -v piper &>/dev/null; then\n" +
+            "  echo -e \"\\033[1;33m⬡ Installing Piper TTS via pip3…\\033[0m\"\n" +
+            "  pip3 install --quiet piper-tts 2>/dev/null || {\n" +
+            "    # pip3 not found — install Python first (Termux)\n" +
+            "    pkg install -y python 2>/dev/null\n" +
+            "    pip3 install --quiet piper-tts 2>/dev/null || true\n" +
+            "  }\n" +
+            "fi\n\n" +
+
+            "command -v piper &>/dev/null || python3 -m piper --help &>/dev/null || {\n" +
+            "  echo -e \"\\033[1;31m✗ Piper unavailable. pip3 install piper-tts\\033[0m\"\n" +
+            "  exit 1\n" +
+            "}\n\n" +
+
+            "[ ! -f \"$VOICE_MODEL\" ] && {\n" +
+            "  echo -e \"\\033[1;33m⬡ Downloading voice model…\\033[0m\"\n" +
+            "  mkdir -p \"$VOICE_DIR\"\n" +
+            "  curl -sL \"$VOICE_URL/en_US-lessac-medium.onnx\"      -o \"$VOICE_MODEL\"\n" +
+            "  curl -sL \"$VOICE_URL/en_US-lessac-medium.onnx.json\" -o \"${VOICE_MODEL}.json\"\n" +
+            "}\n\n" +
+
+            "PIPER_CMD=\"piper\"\n" +
+            "command -v piper &>/dev/null || PIPER_CMD=\"python3 -m piper\"\n" +
+            "echo \"$TEXT\" | $PIPER_CMD --model \"$VOICE_MODEL\" --output_file \"$TMP_WAV\" 2>/dev/null\n\n" +
+
+            "# Termux audio playback — prefer termux-media-player, then mpv\n" +
+            "if command -v termux-media-player &>/dev/null; then\n" +
+            "  termux-media-player play \"$TMP_WAV\"\n" +
+            "elif command -v mpv &>/dev/null; then\n" +
+            "  mpv --no-terminal \"$TMP_WAV\" 2>/dev/null\n" +
+            "else\n" +
+            "  echo \"✓ Audio: $TMP_WAV — run: pkg install mpv  or  pkg install termux-api\"\n" +
+            "fi\n";
+
+        try {
+            File f = new File(dir, "nastech_speak.sh");
+            try (FileOutputStream fos = new FileOutputStream(f)) {
+                fos.write(script.getBytes());
+            }
+            f.setExecutable(true, false);
+        } catch (IOException ignored) {}
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
     private static void appendIfMissing(File file, String content, String marker) throws IOException {
         if (file.exists()) {
-            String existing = new String(readFile(file));
-            if (existing.contains(marker)) return;
+            byte[] data = readFile(file);
+            if (new String(data).contains(marker)) return;
             try (FileOutputStream fos = new FileOutputStream(file, true)) {
                 fos.write(content.getBytes());
             }
@@ -134,162 +346,6 @@ public class NasTechManager {
         }
     }
 
-    private static void writeSpeakScript(File dir) {
-        String speakScript =
-            "#!/data/data/com.termux/files/usr/bin/bash\n" +
-            "# NasTech AI Terminal — Piper TTS offline voice engine\n" +
-            "# Usage: $ speak [text...]\n\n" +
-            "PIPER_DIR=\"$NASTECH_HOME/piper\"\n" +
-            "VOICE_DIR=\"$NASTECH_HOME/voices\"\n" +
-            "VOICE_MODEL=\"$VOICE_DIR/en_US-lessac-medium.onnx\"\n" +
-            "VOICE_CONFIG=\"$VOICE_DIR/en_US-lessac-medium.onnx.json\"\n" +
-            "VOICE_URL=\"https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium\"\n" +
-            "TMP_WAV=\"/tmp/nastech_speak.wav\"\n\n" +
-            "# Collect text\n" +
-            "TEXT=\"$*\"\n" +
-            "if [ -z \"$TEXT\" ]; then\n" +
-            "  echo -e \"\\033[1;36mUsage: $ speak [text]\\033[0m\"\n" +
-            "  echo \"  Example: $ speak Hello from NasTech AI\"\n" +
-            "  exit 0\n" +
-            "fi\n\n" +
-            "# Step 1 — ensure piper binary\n" +
-            "if ! command -v piper &>/dev/null && [ ! -f \"$PIPER_DIR/piper\" ]; then\n" +
-            "  echo -e \"\\033[1;33m⬡ Installing Piper TTS…\\033[0m\"\n" +
-            "  mkdir -p \"$PIPER_DIR\"\n" +
-            "  # Try pip first (works in Termux with Python)\n" +
-            "  if command -v pip3 &>/dev/null; then\n" +
-            "    pip3 install --quiet piper-tts 2>/dev/null && PIPER_CMD=\"python3 -m piper\"\n" +
-            "  fi\n" +
-            "  # Fallback: download piper binary for aarch64\n" +
-            "  if [ -z \"$PIPER_CMD\" ]; then\n" +
-            "    ARCH=$(uname -m)\n" +
-            "    PIPER_RELEASE=\"https://github.com/rhasspy/piper/releases/download/2023.11.14-2\"\n" +
-            "    if [ \"$ARCH\" = \"aarch64\" ]; then\n" +
-            "      curl -sL \"$PIPER_RELEASE/piper_linux_aarch64.tar.gz\" | tar -xz -C \"$PIPER_DIR\" --strip-components=1\n" +
-            "    elif [ \"$ARCH\" = \"armv7l\" ]; then\n" +
-            "      curl -sL \"$PIPER_RELEASE/piper_linux_armv7l.tar.gz\" | tar -xz -C \"$PIPER_DIR\" --strip-components=1\n" +
-            "    fi\n" +
-            "    chmod +x \"$PIPER_DIR/piper\" 2>/dev/null\n" +
-            "    export PATH=\"$PIPER_DIR:$PATH\"\n" +
-            "  fi\n" +
-            "else\n" +
-            "  [ -f \"$PIPER_DIR/piper\" ] && export PATH=\"$PIPER_DIR:$PATH\"\n" +
-            "fi\n\n" +
-            "# Determine piper command\n" +
-            "if command -v piper &>/dev/null; then\n" +
-            "  PIPER_CMD=\"piper\"\n" +
-            "elif python3 -c 'import piper' &>/dev/null 2>&1; then\n" +
-            "  PIPER_CMD=\"python3 -m piper\"\n" +
-            "else\n" +
-            "  echo -e \"\\033[1;31m✗ Piper not available. Run: pip3 install piper-tts\\033[0m\"\n" +
-            "  exit 1\n" +
-            "fi\n\n" +
-            "# Step 2 — ensure voice model\n" +
-            "if [ ! -f \"$VOICE_MODEL\" ]; then\n" +
-            "  echo -e \"\\033[1;33m⬡ Downloading voice model (en_US Lessac)…\\033[0m\"\n" +
-            "  mkdir -p \"$VOICE_DIR\"\n" +
-            "  curl -sL --progress-bar \"$VOICE_URL/en_US-lessac-medium.onnx\" -o \"$VOICE_MODEL\"\n" +
-            "  curl -sL \"$VOICE_URL/en_US-lessac-medium.onnx.json\" -o \"$VOICE_CONFIG\"\n" +
-            "  echo -e \"\\033[1;32m✓ Voice model ready\\033[0m\"\n" +
-            "fi\n\n" +
-            "# Step 3 — synthesize and play\n" +
-            "echo -e \"\\033[1;36m⬡ Speaking…\\033[0m\"\n" +
-            "echo \"$TEXT\" | $PIPER_CMD --model \"$VOICE_MODEL\" --output_file \"$TMP_WAV\" 2>/dev/null\n\n" +
-            "# Play with whatever is available on Termux\n" +
-            "if command -v termux-media-player &>/dev/null; then\n" +
-            "  termux-media-player play \"$TMP_WAV\"\n" +
-            "  sleep 0.5\n" +
-            "  # Wait for playback\n" +
-            "  while termux-media-player info 2>/dev/null | grep -q '\"status\": \"playing\"'; do sleep 0.3; done\n" +
-            "elif command -v mpv &>/dev/null; then\n" +
-            "  mpv --no-terminal \"$TMP_WAV\" 2>/dev/null\n" +
-            "elif command -v aplay &>/dev/null; then\n" +
-            "  aplay \"$TMP_WAV\" 2>/dev/null\n" +
-            "else\n" +
-            "  echo -e \"\\033[1;33m✓ Audio saved to $TMP_WAV (install mpv or termux-api to auto-play)\\033[0m\"\n" +
-            "fi\n";
-
-        try {
-            File speakFile = new File(dir, "nastech_speak.sh");
-            try (FileOutputStream fos = new FileOutputStream(speakFile)) {
-                fos.write(speakScript.getBytes());
-            }
-            // Make executable
-            speakFile.setExecutable(true, false);
-        } catch (IOException ignored) {}
-    }
-
-    private static void writeAIScript(File dir) {
-        String aiScript =
-            "#!/usr/bin/env python3\n" +
-            "# NasTech AI Terminal — Streaming OpenRouter client\n" +
-            "# Usage: $ ai [prompt...]\n\n" +
-            "import sys, os, json, urllib.request, urllib.error\n\n" +
-            "def stream_ai(prompt):\n" +
-            "    api_key = os.environ.get('OPENROUTER_API_KEY', '').strip()\n" +
-            "    model   = os.environ.get('NASTECH_MODEL', 'openai/gpt-4o').strip()\n\n" +
-            "    if not api_key:\n" +
-            "        print('\\033[1;31m✗ No API key. Run: $ settings  →  set your OpenRouter key\\033[0m')\n" +
-            "        print('  Get a free key at: https://openrouter.ai/keys')\n" +
-            "        sys.exit(1)\n\n" +
-            "    payload = json.dumps({\n" +
-            "        'model': model,\n" +
-            "        'stream': True,\n" +
-            "        'messages': [{'role': 'user', 'content': prompt}]\n" +
-            "    }).encode()\n\n" +
-            "    req = urllib.request.Request(\n" +
-            "        'https://openrouter.ai/api/v1/chat/completions',\n" +
-            "        data=payload,\n" +
-            "        headers={\n" +
-            "            'Authorization': 'Bearer ' + api_key,\n" +
-            "            'Content-Type':  'application/json',\n" +
-            "            'HTTP-Referer':  'https://github.com/ncntech/termux-ap',\n" +
-            "            'X-Title':       'NasTech AI Terminal'\n" +
-            "        }\n" +
-            "    )\n\n" +
-            "    print('\\033[1;36m⬡ NasTech AI [' + model + ']\\033[0m')\n" +
-            "    print('\\033[0;90m' + '─' * 48 + '\\033[0m')\n\n" +
-            "    try:\n" +
-            "        with urllib.request.urlopen(req, timeout=60) as resp:\n" +
-            "            for raw in resp:\n" +
-            "                line = raw.decode('utf-8').strip()\n" +
-            "                if not line.startswith('data:'):\n" +
-            "                    continue\n" +
-            "                data = line[5:].strip()\n" +
-            "                if data == '[DONE]':\n" +
-            "                    break\n" +
-            "                try:\n" +
-            "                    chunk = json.loads(data)\n" +
-            "                    delta = chunk['choices'][0]['delta'].get('content', '')\n" +
-            "                    if delta:\n" +
-            "                        print(delta, end='', flush=True)\n" +
-            "                except (KeyError, json.JSONDecodeError):\n" +
-            "                    pass\n" +
-            "        print('\\n\\033[0;90m' + '─' * 48 + '\\033[0m')\n" +
-            "    except urllib.error.HTTPError as e:\n" +
-            "        body = e.read().decode('utf-8', errors='replace')\n" +
-            "        print('\\n\\033[1;31m✗ HTTP ' + str(e.code) + ': ' + body[:200] + '\\033[0m')\n" +
-            "        sys.exit(1)\n" +
-            "    except Exception as e:\n" +
-            "        print('\\n\\033[1;31m✗ Error: ' + str(e) + '\\033[0m')\n" +
-            "        sys.exit(1)\n\n" +
-            "if __name__ == '__main__':\n" +
-            "    if len(sys.argv) < 2:\n" +
-            "        print('\\033[1;36mUsage: $ ai [prompt]\\033[0m')\n" +
-            "        print('  Example: $ ai explain recursion in simple terms')\n" +
-            "        print('  Model:   ' + os.environ.get('NASTECH_MODEL', 'openai/gpt-4o'))\n" +
-            "        sys.exit(0)\n" +
-            "    stream_ai(' '.join(sys.argv[1:]))\n";
-
-        try {
-            File aiFile = new File(dir, "nastech_ai.py");
-            try (FileOutputStream fos = new FileOutputStream(aiFile)) {
-                fos.write(aiScript.getBytes());
-            }
-            aiFile.setExecutable(true, false);
-        } catch (IOException ignored) {}
-    }
-
     private static byte[] readFile(File f) throws IOException {
         java.io.FileInputStream fis = new java.io.FileInputStream(f);
         byte[] data = new byte[(int) f.length()];
@@ -298,23 +354,26 @@ public class NasTechManager {
         return data;
     }
 
+    // ── Prefs accessors ───────────────────────────────────────────────────────
+
     public static SharedPreferences getPrefs() {
         return sAppContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
 
-    public static String getApiKey() {
-        return getPrefs().getString(KEY_API_KEY, "");
-    }
+    public static String getGroqApiKey()    { return getPrefs().getString(KEY_GROQ_KEY,   ""); }
+    public static String getGeminiApiKey()  { return getPrefs().getString(KEY_GEMINI_KEY, ""); }
+    public static String getApiKey()        { return getPrefs().getString(KEY_OR_KEY,     ""); }
 
-    public static void setApiKey(String key) {
-        getPrefs().edit().putString(KEY_API_KEY, key).apply();
-    }
+    public static void setGroqApiKey(String k)   { getPrefs().edit().putString(KEY_GROQ_KEY,   k).apply(); }
+    public static void setGeminiApiKey(String k) { getPrefs().edit().putString(KEY_GEMINI_KEY, k).apply(); }
+    public static void setApiKey(String k)        { getPrefs().edit().putString(KEY_OR_KEY,     k).apply(); }
 
-    public static boolean isBiometricLockEnabled() {
-        return getPrefs().getBoolean(KEY_BIOMETRIC, false);
-    }
+    public static boolean isBiometricLockEnabled() { return getPrefs().getBoolean(KEY_BIOMETRIC, false); }
+    public static void setBiometricLock(boolean e) { getPrefs().edit().putBoolean(KEY_BIOMETRIC, e).apply(); }
 
-    public static void setBiometricLock(boolean enabled) {
-        getPrefs().edit().putBoolean(KEY_BIOMETRIC, enabled).apply();
+    /** Full path to ~/.nastech — where ai_coordinator.py and all scripts live. */
+    public static String getNasTechHome() {
+        String env = System.getenv("HOME");
+        return (env != null ? env : sAppContext.getFilesDir().getParent()) + "/.nastech";
     }
 }

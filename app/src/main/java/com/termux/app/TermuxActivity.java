@@ -1059,25 +1059,24 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
             fsBtn.setOnClickListener(v -> toggleNasTechFullScreen());
         }
 
-        // AI header button → run NasTech AI in terminal
+        // AI header button → open in-app AI chat
         View aiBtn = findViewById(R.id.nastech_ai_header_btn);
         if (aiBtn != null) {
             aiBtn.setOnClickListener(v -> {
-                runNasTechCommand("$ ai");
-                getDrawer().closeDrawers();
+                startActivity(new Intent(this, com.termux.app.nastech.NasTechAIChatActivity.class));
             });
         }
 
         // Sidebar quick action buttons
         View quickAi = findViewById(R.id.nastech_quick_ai);
         if (quickAi != null) quickAi.setOnClickListener(v -> {
-            runNasTechCommand("$ ai");
+            startActivity(new Intent(this, com.termux.app.nastech.NasTechAIChatActivity.class));
             getDrawer().closeDrawers();
         });
 
         View quickUbuntu = findViewById(R.id.nastech_quick_ubuntu);
         if (quickUbuntu != null) quickUbuntu.setOnClickListener(v -> {
-            runNasTechCommand("$ ubuntu");
+            runNasTechCommand("ubuntu");
             getDrawer().closeDrawers();
         });
 
@@ -1090,7 +1089,7 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
 
         View quickSystem = findViewById(R.id.nastech_quick_system);
         if (quickSystem != null) quickSystem.setOnClickListener(v -> {
-            runNasTechCommand("$ system");
+            runNasTechCommand("nastech system");
             getDrawer().closeDrawers();
         });
 

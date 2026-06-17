@@ -5,6 +5,7 @@
     android:orientation="vertical"
     android:background="@color/nastech_bg_surface">
 
+    <!-- Header -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="52dp"
@@ -44,20 +45,82 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
+            <!-- AI Keys label -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="OpenRouter API Key"
+                android:text="AI Provider Keys (Groq → Gemini → OpenRouter fallback)"
+                android:textColor="@color/nastech_accent"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Groq API Key -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/nastech_settings_groq_key"
                 android:textColor="@color/nastech_text_dim"
                 android:textSize="12sp"
-                android:layout_marginBottom="6dp"
-                android:layout_marginTop="12dp" />
+                android:layout_marginBottom="4dp" />
 
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="sk-or-...">
+                android:hint="gsk_..."
+                android:layout_marginBottom="14dp">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/nastech_settings_groq_key"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textPassword"
+                    android:textColor="@color/nastech_text" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Gemini API Key -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/nastech_settings_gemini_key"
+                android:textColor="@color/nastech_text_dim"
+                android:textSize="12sp"
+                android:layout_marginBottom="4dp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="AIza..."
+                android:layout_marginBottom="14dp">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/nastech_settings_gemini_key"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textPassword"
+                    android:textColor="@color/nastech_text" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- OpenRouter API Key -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/nastech_settings_openrouter_key"
+                android:textColor="@color/nastech_text_dim"
+                android:textSize="12sp"
+                android:layout_marginBottom="4dp" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="sk-or-..."
+                android:layout_marginBottom="14dp">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/nastech_settings_api_key"
@@ -68,12 +131,20 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/nastech_divider"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Biometric Lock -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
                 android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="16dp">
+                android:gravity="center_vertical">
 
                 <TextView
                     android:layout_width="0dp"
@@ -92,6 +163,7 @@
 
             </LinearLayout>
 
+            <!-- Save -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/nastech_settings_save"
                 android:layout_width="match_parent"
@@ -99,7 +171,7 @@
                 android:text="Save Settings"
                 android:textColor="@color/nastech_bg"
                 android:backgroundTint="@color/nastech_accent"
-                android:layout_marginTop="24dp" />
+                android:layout_marginTop="20dp" />
 
         </LinearLayout>
 

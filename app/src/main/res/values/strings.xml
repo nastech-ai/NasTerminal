@@ -257,4 +257,13 @@
     <string name="nastech_installer_title">NasTech v6 Installer</string>
     <string name="nastech_installer_subtitle">Setting up your AI terminal…</string>
 
+    <!-- NasTech AI Chat -->
+    <string name="nastech_chat_welcome">⬡ NasTech AI ready. Groq → Gemini → OpenRouter fallback active.\nType anything to begin.</string>
+    <string name="nastech_chat_no_key">No API key set. Go to Settings → NasTech Settings and add at least one key (Groq, Gemini, or OpenRouter).</string>
+    <string name="nastech_chat_all_failed">All providers failed. Check your API keys and internet connection.</string>
+    <string name="nastech_settings_groq_key">Groq API Key (fastest — free tier)</string>
+    <string name="nastech_settings_gemini_key">Gemini API Key (Google — free tier)</string>
+    <string name="nastech_settings_openrouter_key">OpenRouter API Key (GPT-4o, Claude, etc.)</string>
+    <string name="nastech_settings_model">AI Model (OpenRouter only)</string>
+
 </resources>
