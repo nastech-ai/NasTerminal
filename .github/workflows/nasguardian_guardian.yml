@@ -204,7 +204,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: guardian-identity
         continue-on-error: true
@@ -336,7 +336,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: guardian-*
           merge-multiple: true
@@ -393,7 +393,7 @@ jobs:
 
       - run: pip install requests --quiet
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: guardian-*
           merge-multiple: true
