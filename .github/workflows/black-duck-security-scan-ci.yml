@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Black Duck SCA scan
         continue-on-error: true
-        uses: blackduck-inc/black-duck-security-scan@805cbd09e806b01907bbea0f990723c2bb85abe9
+        uses: blackduck-inc/black-duck-security-scan@3fe94e4b3c3947bd21ba46b7da255d6d3638b325
         with:
           ### ---------- BLACKDUCK SCA SCANNING: REQUIRED FIELDS ----------
           blackducksca_url: ${{ vars.BLACKDUCKSCA_URL }}
