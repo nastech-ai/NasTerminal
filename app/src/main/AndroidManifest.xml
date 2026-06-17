@@ -238,6 +238,21 @@
             android:name=".shared.activities.ReportActivity$ReportActivityBroadcastReceiver"
             android:exported="false" />
 
+        <!-- NasTech AI: Boot receiver — auto-starts daemon after device reboot -->
+        <receiver
+            android:name=".app.nastech.NasTechBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
+        <!-- NasTech AI: Background daemon — foreground service that runs AI commands -->
+        <service
+            android:name=".app.nastech.NasTechDaemonService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
         <service
             android:name=".app.TermuxService"

@@ -37,6 +37,7 @@ public class NasTechManager {
     private static final String INSTALLED_MARKER     = ".agent_installed";
     // SharedPrefs key: show install overlay once on first boot
     private static final String KEY_SHOW_OVERLAY     = "nastech_show_install_overlay";
+    private static final String KEY_DAEMON_ENABLED   = "nastech_daemon_enabled";
 
     private static Context sAppContext;
 
@@ -123,12 +124,20 @@ public class NasTechManager {
             "echo -e \"\\033[1;36m⬡ NasTech Agent Installer\\033[0m\"\n" +
             "echo -e \"\\033[0;90m  Termux detected — using pkg, no sudo\\033[0m\"\n\n" +
 
-            "# Ensure curl is present (Termux — use pkg, never apt-get)\n" +
-            "if ! command -v curl &>/dev/null; then\n" +
-            "  echo -e \"\\033[1;33m[→] Installing curl via pkg…\\033[0m\"\n" +
-            "  pkg install -y curl 2>/dev/null || true\n" +
-            "fi\n\n" +
+            // ── Bootstrap: install core Termux packages before agent ─────────────
+            "echo -e \"\\033[1;36m[1/3] Bootstrapping Termux packages…\\033[0m\"\n" +
+            "pkg update -y 2>/dev/null || true\n" +
+            "pkg install -y python git curl wget openssh vim htop nodejs 2>/dev/null || true\n\n" +
 
+            "# Ensure pip is up to date\n" +
+            "python -m ensurepip --upgrade 2>/dev/null || true\n" +
+            "python -m pip install --upgrade pip 2>/dev/null || true\n\n" +
+
+            "echo -e \"\\033[1;36m[2/3] Installing AI Python dependencies…\\033[0m\"\n" +
+            "python -m pip install --quiet groq google-generativeai openai requests 2>/dev/null || true\n\n" +
+
+            "echo -e \"\\033[1;36m[3/3] Running NasTech Agent installer…\\033[0m\"\n" +
+            "# Ensure curl is present\n" +
             "if ! command -v curl &>/dev/null; then\n" +
             "  echo -e \"\\033[1;31m[✗] curl unavailable. Run: pkg install curl\\033[0m\"\n" +
             "  exit 1\n" +
@@ -379,6 +388,19 @@ public class NasTechManager {
     /** Call immediately before showing the overlay so it never shows twice. */
     public static void clearInstallOverlay() {
         getPrefs().edit().putBoolean(KEY_SHOW_OVERLAY, false).apply();
+    }
+
+    /** Re-arm the install overlay flag (used by Settings → Re-run Installer). */
+    public static void setInstallOverlayPending() {
+        getPrefs().edit().putBoolean(KEY_SHOW_OVERLAY, true).apply();
+    }
+
+    public static boolean isDaemonEnabled() {
+        return getPrefs().getBoolean(KEY_DAEMON_ENABLED, false);
+    }
+
+    public static void setDaemonEnabled(boolean enabled) {
+        getPrefs().edit().putBoolean(KEY_DAEMON_ENABLED, enabled).apply();
     }
 
     /**

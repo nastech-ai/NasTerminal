@@ -173,6 +173,92 @@
                 android:backgroundTint="@color/nastech_accent"
                 android:layout_marginTop="20dp" />
 
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/nastech_divider"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Daemon section label -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Background Daemon"
+                android:textColor="@color/nastech_accent"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Keeps NasTech AI running after boot and executes background shell commands."
+                android:textColor="@color/nastech_text_dim"
+                android:textSize="12sp"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Daemon toggle row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="AI Daemon (auto-start on boot)"
+                    android:textColor="@color/nastech_text"
+                    android:textSize="14sp" />
+
+                <Switch
+                    android:id="@+id/nastech_settings_daemon"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:thumbTint="@color/nastech_accent"
+                    android:trackTint="@color/nastech_button_bg" />
+
+            </LinearLayout>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/nastech_divider"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Installer section label -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="NasTech Agent Installer"
+                android:textColor="@color/nastech_accent"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Re-run if the first-boot install failed or you want to update the NasTech Agent."
+                android:textColor="@color/nastech_text_dim"
+                android:textSize="12sp"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Re-run Installer -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/nastech_settings_reinstall"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:text="⬡  Re-run NasTech Agent Installer"
+                android:textColor="@color/nastech_accent"
+                android:backgroundTint="@color/nastech_button_bg"
+                android:layout_marginBottom="24dp" />
+
         </LinearLayout>
 
     </ScrollView>
