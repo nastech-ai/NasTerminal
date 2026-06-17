@@ -45,7 +45,7 @@ jobs:
       owner:     ${{ steps.v.outputs.owner }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Verify
         id: v
@@ -93,11 +93,11 @@ jobs:
       build_system:   ${{ steps.id.outputs.build_system }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -147,8 +147,8 @@ jobs:
       dep_status: ${{ steps.deps.outputs.status }}
 
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -199,12 +199,12 @@ jobs:
       critical_count: ${{ steps.health.outputs.critical_count }}
 
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@v4
         with:
           name: guardian-identity
         continue-on-error: true
@@ -252,8 +252,8 @@ jobs:
       error_count:     ${{ steps.val.outputs.error_count }}
 
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -328,15 +328,15 @@ jobs:
       release_tag:    ${{ steps.rel.outputs.tag }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@v4
         with:
           pattern: guardian-*
           merge-multiple: true
@@ -386,14 +386,14 @@ jobs:
     if: always()
 
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - run: pip install requests --quiet
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@v4
         with:
           pattern: guardian-*
           merge-multiple: true
